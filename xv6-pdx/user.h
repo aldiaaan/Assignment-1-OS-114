@@ -29,6 +29,12 @@ int halt(void);
 int date(struct rtcdate*);
 #endif
 
+int getuid (void);
+int getgid (void);
+int getppid(void);
+int setuid(int);
+int setgid(int);
+
 // ulib.c
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);

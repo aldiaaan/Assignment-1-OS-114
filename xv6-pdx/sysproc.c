@@ -113,3 +113,23 @@ int sys_date(void)
   return 0;
 }
 #endif
+
+int 
+sys_getuid (void) {
+}
+
+int 
+sys_getgid (void) {
+}
+
+int 
+sys_getppid(void) {
+}
+
+int 
+sys_setuid(void) {
+}
+
+int 
+sys_setgid(void) {
+}	
