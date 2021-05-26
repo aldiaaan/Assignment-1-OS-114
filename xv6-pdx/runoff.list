@@ -87,8 +87,11 @@ date.h
 date.c
 uproc.h
 testuidgid.c
+testsetuid.c
 testuidgid.txt
 p2-test.c
 p3-test.c
 p4-test.c
 testsetprio.c
+time.c
+ps.c

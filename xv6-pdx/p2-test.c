@@ -172,6 +172,7 @@ getcputime(char * name, struct uproc * table){
       break;
     }
   }
+  
   if(p == 0){
     printf(2, "FAILED: Test program \"%s\" not found in table returned by getprocs\n", name);
     return -1;

@@ -7,6 +7,10 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#ifdef CS333_P2
+#include "uproc.h"
+#endif
+
 static char *states[] = {
   [UNUSED]    "unused",
   [EMBRYO]    "embryo",
@@ -128,6 +132,12 @@ allocproc(void)
   #ifdef CS333_P1
   p->start_ticks = ticks;
   #endif
+
+  #ifdef CS333_P2
+  p->cpu_ticks_in = 0;
+  p->cpu_ticks_total = 0;
+  #endif
+
   p->pid = nextpid++;
   release(&ptable.lock);
 
@@ -253,6 +263,10 @@ fork(void)
 
   acquire(&ptable.lock);
   np->state = RUNNABLE;
+  #ifdef CS333_P2
+  np->gid = curproc -> gid;
+  np->uid = curproc -> uid;
+  #endif
   release(&ptable.lock);
 
   return pid;
@@ -395,6 +409,10 @@ scheduler(void)
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
+      #ifdef CS333_P2
+      p->cpu_ticks_in = ticks;
+      #endif
+
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
@@ -422,6 +440,12 @@ sched(void)
 {
   int intena;
   struct proc *p = myproc();
+
+  #ifdef CS333_P2
+  if (p->state != SLEEPING) 
+    p->cpu_ticks_total += (ticks - p->cpu_ticks_in);
+  #endif
+  
 
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
@@ -559,7 +583,41 @@ kill(int pid)
 void
 procdumpP2P3P4(struct proc *p, char *state_string)
 {
-  cprintf("TODO for Project 2, delete this line and implement procdumpP2P3P4() in proc.c to print a row\n");
+  int elapsed_time_ms = ticks - p->start_ticks;
+  int elapsed_time_s = elapsed_time_ms/1000;
+  elapsed_time_ms = elapsed_time_ms % 1000;
+  char* zeros = "";
+  if(elapsed_time_ms < 100 && elapsed_time_ms >= 10){
+    zeros = "0";
+  }
+  if(elapsed_time_ms < 10){
+    zeros = "00";
+  }
+  int cpu_sec = p->cpu_ticks_total / 1000;
+  int cpu_ms  = p->cpu_ticks_total % 1000;
+  char* cpu_zeros = "";
+  if(cpu_ms < 100 && cpu_ms >= 10){
+    cpu_zeros = "0";
+  }
+  if(cpu_ms < 10){
+    cpu_zeros = "00";
+  }  
+
+  cprintf("%d\t%s\t\t%d\t%d\t%d\t%d.%s%d\t%d.%s%d\t%s\t%d\t", p->pid, 
+                                                            p->name,
+                                                            p->uid,
+                                                            p->gid,
+                                                            p->parent ? p->parent->pid : p->pid,
+                                                           
+                                                            elapsed_time_s,
+                                                            zeros,
+                                                            elapsed_time_ms,
+                                                            
+                                                            cpu_sec,
+                                                            cpu_zeros,
+                                                            cpu_ms,
+                                                             states[p->state],
+                                                            p->sz);
   return;
 }
 #elif defined(CS333_P1)
@@ -935,3 +993,48 @@ checkProcs(const char *file, const char *func, int line)
 }
 #endif // DEBUG
 
+#ifdef CS333_P2
+int 
+setuid(int * uid){
+  acquire(&ptable.lock);
+  myproc()->uid = * uid;
+  release(&ptable.lock);
+  return 0;
+}
+
+int 
+setgid(int * gid){
+  acquire(&ptable.lock);
+  myproc()->gid = * gid;
+  release(&ptable.lock);
+  return 0;
+}
+
+int
+getprocs(uint max, struct uproc* table){
+  struct proc* p;
+  int num_proc = 0;
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(num_proc == max)
+      break;
+    if(p->state == UNUSED||p->state == EMBRYO)
+      continue;
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+      safestrcpy(table[num_proc].state, states[p->state],STRMAX);
+    else
+      safestrcpy(table[num_proc].state,"???",STRMAX);
+    table[num_proc].pid = p->pid;
+    table[num_proc].uid = p->uid;
+    table[num_proc].gid = p->gid;
+    table[num_proc].ppid = p->parent ? p->parent->pid : p->pid;
+    table[num_proc].elapsed_ticks = ticks - p->start_ticks;;
+    table[num_proc].CPU_total_ticks = p->cpu_ticks_total;
+    table[num_proc].size = p->sz;
+    safestrcpy(table[num_proc].name,p->name,STRMAX);
+    num_proc++;
+  }
+  release(&ptable.lock);
+  return num_proc;
+}
+#endif

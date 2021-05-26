@@ -1,3 +1,5 @@
+#include "types.h"
+
 #ifndef UPROC_H
 #define UPROC_H
 #define STRMAX 32
@@ -7,9 +9,9 @@ struct uproc {
   uint uid;
   uint gid;
   uint ppid;
-#ifdef CS333_P4
-  uint priority;
-#endif // CS333_P4
+  #ifdef CS333_P4
+    uint priority;
+  #endif // CS333_P4
   uint elapsed_ticks;
   uint CPU_total_ticks;
   char state[STRMAX];
